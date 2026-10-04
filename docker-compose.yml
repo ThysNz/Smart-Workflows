@@ -1,0 +1,19 @@
+services:
+  web:
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"   # local only
+    volumes:
+      - ./data:/data
+      - ./app:/srv/app          # live code edits
+      - ./static:/srv/static
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Not started by `up`; launched on demand by an MCP client (stdio).
+  mcp:
+    build: .
+    profiles: ["mcp"]
+    volumes:
+      - ./data:/data
+    command: python -m app.mcp_server
+    stdin_open: true

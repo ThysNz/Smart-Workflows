@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smart Workflows</title>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+:root{--bg:#f6f7f9;--panel:#fff;--text:#1d2330;--muted:#6b7385;--line:#dfe3ea;--accent:#2f6fed;--code:#0f1623;--codefg:#d6e2ff}
+@media (prefers-color-scheme:dark){:root{--bg:#12151c;--panel:#1a1f2a;--text:#e6e9f0;--muted:#8d96a8;--line:#2b3242;--accent:#6c9bff;--code:#0b0e14;--codefg:#cfe0ff}}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.5 system-ui,Segoe UI,sans-serif;background:var(--bg);color:var(--text);display:flex;height:100vh}
+aside{width:280px;border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;flex-shrink:0}
+aside h1{font-size:16px;margin:0;padding:14px 16px;border-bottom:1px solid var(--line)}
+aside .tools{padding:10px;display:flex;flex-direction:column;gap:8px}
+#list{overflow:auto;flex:1}
+.wf{padding:10px 16px;cursor:pointer;border-left:3px solid transparent}
+.wf:hover{background:var(--bg)}.wf.active{border-left-color:var(--accent);background:var(--bg)}
+.wf small{display:block;color:var(--muted)}
+main{flex:1;overflow:auto;padding:24px 32px}
+.wrap{max-width:900px;margin:0 auto}
+input,textarea,select,button{font:inherit;color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 10px}
+textarea{width:100%;resize:vertical;min-height:70px;font-family:ui-monospace,Consolas,monospace;font-size:13px}
+input[type=text]{width:100%}
+button{cursor:pointer}button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.danger:hover{border-color:#d33;color:#d33}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin:14px 0}
+.card h3{margin:0 0 4px;display:flex;gap:10px;align-items:center}
+.num{background:var(--accent);color:#fff;border-radius:50%;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.badge{font-size:11px;padding:1px 8px;border-radius:10px;border:1px solid var(--line);color:var(--muted)}
+.badge.done{color:#1a8f4c;border-color:#1a8f4c}.badge.blocked{color:#d33;border-color:#d33}.badge.in-progress{color:#c78a00;border-color:#c78a00}
+.row{display:flex;gap:8px;align-items:center;margin:4px 0}
+.cmd{background:var(--code);color:var(--codefg);border-radius:6px;padding:8px 10px;margin:6px 0;display:flex;gap:10px;align-items:flex-start;font-family:ui-monospace,Consolas,monospace;font-size:13px}
+.cmd code{flex:1;white-space:pre-wrap;word-break:break-all}
+.cmd .meta{color:#8aa0c8;font-size:11px}
+.cmd button{font-size:11px;padding:2px 8px;background:transparent;color:var(--codefg);border-color:#3a4560}
+.path{font-family:ui-monospace,Consolas,monospace;font-size:13px;display:flex;gap:8px;align-items:center;margin:3px 0}
+.path code{background:var(--bg);padding:2px 6px;border-radius:4px;border:1px solid var(--line)}
+.path button{font-size:11px;padding:1px 6px}
+.label{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:12px 0 2px}
+.imgs{display:flex;flex-wrap:wrap;gap:10px}
+.imgs figure{margin:0;max-width:320px}.imgs img{max-width:100%;border:1px solid var(--line);border-radius:6px}
+.imgs figcaption{font-size:12px;color:var(--muted)}
+.md :first-child{margin-top:0}.md pre{background:var(--code);color:var(--codefg);padding:10px;border-radius:6px;overflow:auto}
+.mermaid{background:#fff;border-radius:6px;padding:8px;overflow:auto}
+.actions{margin-left:auto;display:flex;gap:6px}
+.empty{color:var(--muted);text-align:center;margin-top:20vh}
+.sub{color:var(--muted)}
+.tag{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:0 8px;font-size:12px;margin-right:4px}
+.erow{display:grid;grid-template-columns:2fr 1fr 1.5fr 1.5fr auto;gap:6px;margin:4px 0}
+.erow.p{grid-template-columns:3fr 3fr auto}
+.erow input{min-width:0}
+#menu{display:none;float:right;padding:2px 10px}
+@media (max-width:800px){
+  body{flex-direction:column;height:auto;min-height:100vh}
+  aside{width:100%;border-right:0;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+  #menu{display:inline-block}
+  aside .tools,#list{display:none}
+  aside.open .tools{display:flex}
+  aside.open #list{display:block;max-height:45vh}
+  main{padding:14px 12px;overflow:visible}
+  .card{padding:12px}
+  .card h3{flex-wrap:wrap}
+  .card h3 .actions{width:100%;margin-left:0;justify-content:flex-end}
+  .erow,.erow.p{grid-template-columns:1fr auto}
+  .erow input:not(:first-child){grid-column:1}
+  .erow button{grid-column:2;grid-row:1}
+  .cmd{flex-direction:column}
+  .path{flex-wrap:wrap}
+  .path code{word-break:break-all;max-width:100%}
+  main,.wrap,.card{min-width:0;max-width:100%}
+  .imgs figure{max-width:100%}
+  input,textarea,select{font-size:16px} /* avoid iOS zoom on focus */
+}
+</style>
+</head>
+<body>
+<aside>
+  <h1>Smart Workflows <button id="menu" onclick="this.closest('aside').classList.toggle('open')">☰</button></h1>
+  <div class="tools">
+    <input id="q" type="text" placeholder="Search paths, commands, text…">
+    <button class="primary" onclick="newWorkflow()">+ New workflow</button>
+  </div>
+  <div id="list"></div>
+</aside>
+<main><div class="wrap" id="view"><div class="empty">Select or create a workflow.</div></div></main>
+
+<script>
+mermaid.initialize({startOnLoad:false,theme:'default',securityLevel:'strict'});
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const md=s=>DOMPurify.sanitize(marked.parse(s||''));
+let current=null, editing=new Set(), editingHead=false;
+
+async function api(method,url,body){
+  const r=await fetch(url,{method,headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});
+  if(!r.ok) throw new Error((await r.json().catch(()=>({}))).detail||r.statusText);
+  return r.status===204?null:r.json();
+}
+
+async function loadList(selectSlug){
+  const items=await api('GET','/api/workflows');
+  $('#list').innerHTML=items.map(w=>`<div class="wf ${current&&current.slug===w.slug?'active':''}" onclick="openWf('${w.slug}')">
+    ${esc(w.title)}<small>${w.step_count} steps${w.tags.length?' · '+esc(w.tags.join(', ')):''}</small></div>`).join('')||'<div class="sub" style="padding:16px">No workflows yet.</div>';
+  if(selectSlug) openWf(selectSlug);
+}
+async function openWf(slug){ current=await api('GET','/api/workflows/'+slug); editing.clear(); editingHead=false; document.querySelector('aside').classList.remove('open'); render(); loadList(); }
+async function newWorkflow(){
+  const title=prompt('Workflow title'); if(!title) return;
+  const wf=await api('POST','/api/workflows',{title}); await loadList(wf.slug);
+}
+
+function render(){
+  if(!current) return;
+  const wf=current;
+  let h='';
+  if(editingHead){
+    h+=`<div class="card"><input id="h-title" type="text" value="${esc(wf.title)}">
+      <div class="label">Description (Markdown)</div><textarea id="h-desc">${esc(wf.description)}</textarea>
+      <div class="label">Tags (comma separated)</div><input id="h-tags" type="text" value="${esc(wf.tags.join(', '))}">
+      <div class="label">Overview diagram (Mermaid)</div><textarea id="h-diag">${esc(wf.diagram)}</textarea>
+      <div class="row"><button class="primary" onclick="saveHead()">Save</button><button onclick="editingHead=false;render()">Cancel</button></div></div>`;
+  } else {
+    h+=`<div class="row"><h2 style="margin:0">${esc(wf.title)}</h2><div class="actions">
+      <button onclick="editingHead=true;render()">Edit</button><button class="danger" onclick="delWf()">Delete</button></div></div>
+      <div>${wf.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div>
+      <div class="md">${md(wf.description)}</div>
+      ${wf.diagram?`<pre class="mermaid">${esc(wf.diagram)}</pre>`:''}`;
+  }
+  wf.steps.forEach((s,i)=>{ h+=editing.has(s.id)?stepEdit(s,i):stepView(s,i); });
+  h+=`<div class="row"><button class="primary" onclick="addStep()">+ Add step</button></div>`;
+  $('#view').innerHTML=h;
+  renderMermaid();
+}
+
+function stepView(s,i){
+  const slug=current.slug;
+  return `<div class="card" id="step-${s.id}">
+    <h3><span class="num">${i+1}</span>${esc(s.title)} <span class="badge ${s.status}">${s.status}</span>
+      <span class="actions">
+        <button onclick="move('${s.id}',-1)" ${i===0?'disabled':''}>↑</button>
+        <button onclick="move('${s.id}',1)" ${i===current.steps.length-1?'disabled':''}>↓</button>
+        <button onclick="editing.add('${s.id}');render()">Edit</button>
+        <button class="danger" onclick="delStep('${s.id}')">✕</button></span></h3>
+    <div>${s.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div>
+    <div class="md">${md(s.description)}</div>
+    ${s.paths.length?`<div class="label">Paths</div>`+s.paths.map(p=>`<div class="path"><code>${esc(p.path)}</code><button onclick="copy(this,${esc(JSON.stringify(JSON.stringify(p.path)))})">copy</button><span class="sub">${esc(p.note)}</span></div>`).join(''):''}
+    ${s.commands.length?`<div class="label">Commands</div>`+s.commands.map(c=>`<div class="cmd"><div style="flex:1"><div class="meta">${esc(c.shell)}${c.cwd?' · cwd: '+esc(c.cwd):''}${c.note?' · '+esc(c.note):''}</div><code>${esc(c.cmd)}</code></div><button onclick="copy(this,${esc(JSON.stringify(JSON.stringify(c.cmd)))})">copy</button></div>`).join(''):''}
+    ${s.diagram?`<div class="label">Diagram</div><pre class="mermaid">${esc(s.diagram)}</pre>`:''}
+    ${s.images.length?`<div class="label">Images</div><div class="imgs">`+s.images.map(im=>`<figure><img src="/assets/${slug}/${encodeURIComponent(im.file)}"><figcaption>${esc(im.caption)}</figcaption></figure>`).join('')+`</div>`:''}
+    ${s.notes?`<div class="label">Notes</div><div class="md">${md(s.notes)}</div>`:''}
+  </div>`;
+}
+
+function cmdRow(c){return `<div class="erow c"><input type="text" placeholder="command" value="${esc(c.cmd)}"><input type="text" placeholder="shell" value="${esc(c.shell||'powershell')}"><input type="text" placeholder="cwd" value="${esc(c.cwd)}"><input type="text" placeholder="note" value="${esc(c.note)}"><button onclick="this.parentNode.remove()">✕</button></div>`}
+function pathRow(p){return `<div class="erow p"><input type="text" placeholder="path" value="${esc(p.path)}"><input type="text" placeholder="note" value="${esc(p.note)}"><button onclick="this.parentNode.remove()">✕</button></div>`}
+function imgRow(im){return `<div class="erow p" data-file="${esc(im.file)}"><span class="sub" style="align-self:center">${esc(im.file)}</span><input type="text" placeholder="caption" value="${esc(im.caption)}"><button onclick="this.parentNode.remove()">✕</button></div>`}
+
+function stepEdit(s,i){
+  const id=s.id;
+  return `<div class="card" id="step-${id}" data-id="${id}">
+    <div class="row"><span class="num">${i+1}</span><input type="text" class="f-title" value="${esc(s.title)}">
+      <select class="f-status">${['todo','in-progress','done','blocked'].map(x=>`<option ${x===s.status?'selected':''}>${x}</option>`).join('')}</select></div>
+    <div class="label">Description (Markdown)</div><textarea class="f-desc">${esc(s.description)}</textarea>
+    <div class="label">Paths</div><div class="f-paths">${s.paths.map(pathRow).join('')}</div>
+    <button onclick="this.previousElementSibling.insertAdjacentHTML('beforeend',pathRow({path:'',note:''}))">+ path</button>
+    <div class="label">Commands</div><div class="f-cmds">${s.commands.map(cmdRow).join('')}</div>
+    <button onclick="this.previousElementSibling.insertAdjacentHTML('beforeend',cmdRow({cmd:'',shell:'powershell',cwd:'',note:''}))">+ command</button>
+    <div class="label">Diagram (Mermaid)</div><textarea class="f-diag" placeholder="flowchart LR&#10;  A --> B">${esc(s.diagram)}</textarea>
+    <div class="label">Images (paste a screenshot into this box, or choose files)</div>
+    <div class="f-imgs">${s.images.map(imgRow).join('')}</div>
+    <input type="file" accept="image/*" multiple onchange="uploadFiles(this.files,this.closest('.card'))">
+    <div class="label">Notes (Markdown)</div><textarea class="f-notes">${esc(s.notes)}</textarea>
+    <div class="label">Tags (comma separated)</div><input type="text" class="f-tags" value="${esc(s.tags.join(', '))}">
+    <div class="row"><button class="primary" onclick="saveStep('${id}')">Save</button><button onclick="editing.delete('${id}');render()">Cancel</button></div>
+  </div>`;
+}
+
+async function uploadFiles(files,card){
+  for(const f of files){
+    const fd=new FormData(); fd.append('file',f,f.name||'pasted.png');
+    const r=await fetch(`/api/workflows/${current.slug}/assets`,{method:'POST',body:fd});
+    if(!r.ok){alert('Upload failed');continue}
+    const {file}=await r.json();
+    card.querySelector('.f-imgs').insertAdjacentHTML('beforeend',imgRow({file,caption:''}));
+  }
+}
+document.addEventListener('paste',e=>{
+  const card=document.activeElement&&document.activeElement.closest&&document.activeElement.closest('.card[data-id]');
+  if(!card) return;
+  const files=[...e.clipboardData.files].filter(f=>f.type.startsWith('image/'));
+  if(files.length){e.preventDefault();uploadFiles(files,card)}
+});
+
+const split=s=>s.split(',').map(x=>x.trim()).filter(Boolean);
+async function saveStep(id){
+  const c=document.getElementById('step-'+id), v=sel=>c.querySelector(sel).value;
+  const body={
+    title:v('.f-title')||'Untitled', status:v('.f-status'), description:v('.f-desc'),
+    diagram:v('.f-diag'), notes:v('.f-notes'), tags:split(v('.f-tags')),
+    paths:[...c.querySelectorAll('.f-paths .erow')].map(r=>{const i=r.querySelectorAll('input');return{path:i[0].value,note:i[1].value}}).filter(p=>p.path),
+    commands:[...c.querySelectorAll('.f-cmds .erow')].map(r=>{const i=r.querySelectorAll('input');return{cmd:i[0].value,shell:i[1].value||'powershell',cwd:i[2].value,note:i[3].value}}).filter(x=>x.cmd),
+    images:[...c.querySelectorAll('.f-imgs .erow')].map(r=>({file:r.dataset.file,caption:r.querySelector('input').value})),
+  };
+  await api('PATCH',`/api/workflows/${current.slug}/steps/${id}`,body);
+  editing.delete(id); await openWf(current.slug);
+}
+async function addStep(){
+  const s=await api('POST',`/api/workflows/${current.slug}/steps`,{title:'New step'});
+  await openWf(current.slug); editing.add(s.id); render();
+  document.getElementById('step-'+s.id)?.scrollIntoView({behavior:'smooth'});
+}
+async function delStep(id){ if(!confirm('Delete this step?')) return; await api('DELETE',`/api/workflows/${current.slug}/steps/${id}`); openWf(current.slug); }
+async function move(id,d){
+  const o=current.steps.map(s=>s.id), i=o.indexOf(id), j=i+d; if(j<0||j>=o.length) return;
+  [o[i],o[j]]=[o[j],o[i]]; current=await api('PUT',`/api/workflows/${current.slug}/order`,{order:o}); render();
+}
+async function saveHead(){
+  current=await api('PATCH','/api/workflows/'+current.slug,{title:$('#h-title').value||'Untitled',description:$('#h-desc').value,tags:split($('#h-tags').value),diagram:$('#h-diag').value});
+  editingHead=false; render(); loadList();
+}
+async function delWf(){ if(!confirm('Delete this workflow and its images permanently?')) return; await api('DELETE','/api/workflows/'+current.slug); current=null; $('#view').innerHTML='<div class="empty">Select or create a workflow.</div>'; loadList(); }
+function copy(btn,json){ navigator.clipboard.writeText(JSON.parse(json)); const t=btn.textContent; btn.textContent='✓'; setTimeout(()=>btn.textContent=t,900); }
+
+async function renderMermaid(){
+  const nodes=[...document.querySelectorAll('pre.mermaid')];
+  for(const n of nodes){
+    try{ const {svg}=await mermaid.render('m'+Math.random().toString(36).slice(2),n.textContent); n.outerHTML=`<div class="mermaid">${svg}</div>`; }
+    catch(e){ n.outerHTML=`<pre style="color:#d33">Diagram error: ${esc(e.message||e)}</pre>`; }
+  }
+}
+
+let st; $('#q').addEventListener('input',e=>{
+  clearTimeout(st); st=setTimeout(async()=>{
+    const q=e.target.value.trim(); if(!q) return loadList();
+    const hits=await api('GET','/api/search?q='+encodeURIComponent(q));
+    $('#list').innerHTML=hits.map(h=>`<div class="wf" onclick="openWf('${h.workflow}').then(()=>${h.step?`document.getElementById('step-${h.step}')?.scrollIntoView()`:'0'})">${esc(h.title)}<small>${h.workflow} · matched ${h.match}</small></div>`).join('')||'<div class="sub" style="padding:16px">No matches.</div>';
+  },200);
+});
+loadList();
+</script>
+</body>
+</html>

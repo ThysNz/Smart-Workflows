@@ -1,0 +1,5 @@
+﻿__pycache__/
+*.pyc
+.venv/
+# your workflow content stays local; remove this line to version it
+data/workflows/
